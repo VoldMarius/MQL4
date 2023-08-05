@@ -1,0 +1,1865 @@
+//+------------------------------------------------------------------+
+//|                                                      Paterns.mqh |
+//|                                  Copyright 2023, MetaQuotes Ltd. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property strict
+static datetime t             = 0;              //Переменная для хранения контрольного значения времени
+double          high2         = High[2];
+double          high1         = High[1];
+double          high4         = High[4];
+double          high3         = High[3];
+double          low2          = Low[2];
+double          low0          = Low[0];
+double          low1          = Low[1];
+double          low3          = Low[3];
+double          low4          = Low[4];
+double          high0         = High[0];
+
+double          open0         = Open[0];
+double          close0        = Close[0];
+double          open1         = Open[1];
+double          close1        = Close[1];
+double          close2        = Close[2];
+double          open3         = Open[3];
+double          close3        = Close[3];
+double          open4         = Open[4];
+double          close4        = Close[4];
+double          open2         = Open[2];
+double          spread        = MarketInfo(_Symbol, MODE_SPREAD);
+double          spread_value  = spread * Point;
+double          body1         = MathAbs(open1 - close1);
+double          currenttBid;
+double          currenttAsk;
+
+
+//+-----------------------------------------------------------------------+
+//|   bullishFalseBreakoutVolatility     Бычий ложный пробой на покупку   |
+//+-----------------------------------------------------------------------+
+bool bullishFalseBreakoutVolatility()
+  {
+
+   double currentBid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double bb_upper_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 1);
+   double bb_lower_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 1);
+   double bb_upper_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 2);
+   double bb_lower_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 2);
+   double bb_lower_6 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 6);
+   double bb_lower_4 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 4);
+   double bb_lower_3 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 3);
+   double max_vol_prev_candles = 0;
+   long curr_vol_signal_candle = iVolume(_Symbol, PERIOD_CURRENT, 0);
+
+   for(int i = 1; i <= 3; i++)
+     {
+      long volume = iVolume(_Symbol, PERIOD_CURRENT, i);
+      max_vol_prev_candles = MathMax(max_vol_prev_candles, volume);
+     }
+
+   double open_1 = iOpen(_Symbol, PERIOD_CURRENT, 1);
+   double close_1 = iClose(_Symbol, PERIOD_CURRENT, 1);
+   double low_1 = iLow(_Symbol, PERIOD_CURRENT, 1);
+   double low_3 = iLow(_Symbol, PERIOD_CURRENT, 3);
+   double open_2 = iOpen(_Symbol, PERIOD_CURRENT, 2);
+   double close_2 = iClose(_Symbol, PERIOD_CURRENT, 2);
+   double low_2 = iLow(_Symbol, PERIOD_CURRENT, 2);
+   double close_0 = iClose(_Symbol, PERIOD_CURRENT, 0);
+   double low_0 = iLow(_Symbol, PERIOD_CURRENT, 0);
+
+   bool high_vol = curr_vol_signal_candle >= max_vol_prev_candles;
+   bool close_bb_2_above = close_2 > bb_lower_2;
+
+//Активные
+   bool low_bb_2_below = low_2 < bb_lower_2 -spread_value ;
+   bool bullish_candle_1 = close_1 > open_1;
+   bool open_1_above_bb_lower_1 = open_1 > bb_lower_1;
+   bool bollinger_low_bands_up = bb_lower_6 <  bb_lower_4< bb_lower_3 < bb_lower_2;
+
+
+   bool flag=False ;
+   if(currentBid < middleBB1)
+     {
+      if(low_bb_2_below &&  bullish_candle_1 && open_1_above_bb_lower_1 && bollinger_low_bands_up)
+         flag =True;
+     }
+   return flag;
+  }
+
+//+---------------------------------------------------------------------------+
+//| bearishFalseBreakoutVolatility     Медвежий ложный пробой на продажу      |
+//+---------------------------------------------------------------------------+
+bool bearishFalseBreakoutVolatility()
+  {
+   double current_price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bb_upper_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 1);
+   double bb_lower_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 1);
+   double bb_upper_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 2);
+   double bb_lower_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 2);
+   double bb_upper_3 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 3);
+   double bb_upper_4 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 4);
+   double bb_upper_6 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 6);
+
+   double max_vol_prev_candles = 0;
+   long curr_vol_signal_candle = iVolume(_Symbol, PERIOD_CURRENT, 0);
+
+   for(int i = 1; i <= 3; i++)
+     {
+      long volume = iVolume(_Symbol, PERIOD_CURRENT, i);
+      max_vol_prev_candles = MathMax(max_vol_prev_candles, volume);
+     }
+
+   double open_1 = iOpen(_Symbol, PERIOD_CURRENT, 1);
+   double close_1 = iClose(_Symbol, PERIOD_CURRENT, 1);
+   double high_1 = iHigh(_Symbol, PERIOD_CURRENT, 1);
+   double open_2 = iOpen(_Symbol, PERIOD_CURRENT, 2);
+   double close_2 = iClose(_Symbol, PERIOD_CURRENT, 2);
+   double high_2 = iHigh(_Symbol, PERIOD_CURRENT, 2);
+   double close_0 = iClose(_Symbol, PERIOD_CURRENT, 0);
+   double high_0 = iHigh(_Symbol, PERIOD_CURRENT, 0);
+
+   double high_bb_2 = bb_upper_2;
+
+   bool high_vol = curr_vol_signal_candle >= max_vol_prev_candles;
+   bool close_bb_2_below = close_2 < bb_upper_2;
+   bool high_bb_2_above = high_2 > bb_upper_2 +spread_value;
+   bool bearish_candle_1 = open_1 > close_1;
+   bool open_bb_1_below = open_1 < bb_upper_1;
+   bool bollinger_upper_bands_down = bb_upper_6 > bb_upper_4 > bb_upper_3 > bb_upper_2;
+   bool open_1_below_bb_upper_1 = open_1 < bb_upper_1;
+   bool high_1_below_high_2 = high_1 < high_2;
+
+   bool flag = False ;
+   if(high_bb_2_above && bearish_candle_1 && bollinger_upper_bands_down && open_1_below_bb_upper_1&& current_price > middleBB1)
+      flag = True;
+
+   return flag;
+  }
+
+
+//+-------------------------------TakeProfit-----------------------------------+
+//+------------------------------------------------------------------+
+//| TakeProfit для покупки по bullishFalseBreakoutVolatility         |
+//+------------------------------------------------------------------+
+double CalculateBuyTake()
+  {
+   double TakeProfit ;
+   double currentBid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double bb_upper_2 = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 2);
+   if(currentBid == bb_upper_2)
+     {
+      TakeProfit = bb_upper_2;
+      return(TakeProfit);
+     }
+   else
+      return TakeProfit = currentBid*2;
+  }
+//+-----------------------------------------------------------------+
+//| TakeProfit для продажи  по bullishFalseBreakoutVolatility         |
+//+-------------------------------------------------------------------+
+double CalculateSellTake()
+  {
+   double TakeProfit ;
+   double currentAsk = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bb_lower_2 = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 2);
+   if(currentAsk == bb_lower_2)
+     {
+      TakeProfit = bb_lower_2;
+      return(TakeProfit);
+     }
+   else
+      return TakeProfit = currentAsk/2;
+
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+double RefreshBidAsk()
+  {
+
+   double prevBid = 0.0; ;
+   double prevAsk = 0.0; ;
+   double currentBid = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double currentAsk = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+
+   if(currentBid != prevBid || currentAsk != prevAsk)
+     {
+      prevBid = currentBid;
+      prevAsk = currentAsk;
+
+      // обновляем значения, делаем необходимые действия
+     }
+   return prevBid&&prevAsk;
+// повторяем функцию через одну секунду
+
+  }
+//+------------------------------------------------------------------+
+//|  Bullish пересечение текущей ценой уровней каналов Боллинджера   |
+//+------------------------------------------------------------------+
+bool CheckBBandsBullishCrossing()
+  {
+   double current_price = SymbolInfoDouble(_Symbol, SYMBOL_BID);
+   double bb_upper = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 1);
+   double bb_middle = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_MAIN, 1);
+   double bb_lower = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 1);
+
+   bool crossing = false; // устанавливаем значение по умолчанию
+
+   if(current_price > bb_middle)   // проверяем, находится ли текущая цена за пределами канала Боллинджера
+     {
+      crossing = true; // устанавливаем значение crossing в true, если есть пересечение
+     }
+
+   return crossing; // возвращаем булевое значение crossing
+  }
+//+------------------------------------------------------------------+
+//|  Bullish пересечение текущей ценой уровней каналов Боллинджера   |
+//+------------------------------------------------------------------+
+bool CheckBBandsBearishCrossing()
+  {
+   double current_price = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
+   double bb_upper = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 1);
+   double bb_middle = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_MAIN, 1);
+   double bb_lower = iBands(_Symbol, _Period, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 1);
+
+   bool crossing = false; // устанавливаем значение по умолчанию
+
+   if(current_price < bb_middle)   // проверяем, находится ли текущая цена за пределами канала Боллинджера
+     {
+      crossing = true; // устанавливаем значение crossing в true, если есть пересечение
+     }
+
+   return crossing; // возвращаем булевое значение crossing
+  }
+
+//+------------------------------------------------------------------+
+//|          Проверка новой свечи                                    |
+//+------------------------------------------------------------------+
+bool isNewCandle()
+  {
+
+   if(t != iTime(_Symbol, PERIOD_CURRENT, 0))      // свеча новая
+     {
+      t = iTime(_Symbol, PERIOD_CURRENT, 0);
+      return true;
+     }
+   else     // свеча не новая
+     {
+      return false;
+     }
+  }
+
+
+
+//---------------------------------------------------------------+
+//|Для добавления запроса данных индикатора Bollinger Bands          |
+//+------------------------------------------------------------------+
+
+// Получаем значение Bollinger Bands
+//(iBands(Symbol(),//текущего символа,
+//           PERIOD_CURRENT, //текущего периода
+//           20, // количества периодов для расчета,
+//           2, // стандартного отклонения,
+//           0, //начения типов цен в функции `iBands()`:
+//- 0 - PRICECLOSE (цена закрытия)
+//- 1 - PRICEOPEN (цена открытия)
+//- 2 - PRICEHIGH (максимальная цена)
+//- 3 - PRICELOW (минимальная цена)
+//- 4 - PRICEMEDIAN (медианная цена)
+//- 5 - PRICETYPICAL (средняя цена)
+//- 6 - PRICEWEIGHTED (взвешенная цена)
+//Для получения значения верхней полосы Bollinger Bands для свечи [0]
+double upper_band_value_0 = iBands(_Symbol, PERIOD_CURRENT,20, 2, 0, PRICE_CLOSE, MODE_UPPER, 0);
+//Для получения значения верхней полосы Bollinger Bands для свечи [1]
+double upper_band_value_1 = iBands(_Symbol, PERIOD_CURRENT,20, 2, 0, PRICE_CLOSE, MODE_UPPER, 1);
+//Для получения значения верхней полосы Bollinger Bands для свечи [2]
+double upper_band_value_2 = iBands(_Symbol, PERIOD_CURRENT,20, 2, 0, PRICE_CLOSE, MODE_UPPER, 2);
+//Для получения значения нижней  полосы Bollinger Bands  для свечи [0]
+double lower_band_value_0 = iBands(_Symbol, PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_LOWER, 0);
+//Для получения значения нижней  полосы Bollinger Bands  для свечи [1]
+double lower_band_value_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_LOWER, 1);
+//Для получения значения нижней  полосы Bollinger Bands  для свечи [1]
+double lower_band_value_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_LOWER, 2);
+//Для получения значения средней  полосы Bollinger Bands  для свечи [1]
+double middleBB1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_MAIN, 1);
+// Здесь NULL - означает текущий символ,
+//       0 - период,
+//       PERIOD_CURRENT -period - период Bollinger Bands,
+//       2 -deviation - значение отклонения.
+//       PRICE_CLOSE указывает на цену, на которой рассчитываются полосы,
+//       MODE_UPPER - выбор верхней полосы Bollinger Bands,
+//       1 -candle_index - номер свечи, для которой вы хотите получить значение. Значение будет сохранено в upper_band_value.
+//+------------------------------------------------------------------+
+//|Актализация данных о свечах по времени                            |
+//+------------------------------------------------------------------+
+void actualTime()
+  {
+   const int interval = PERIOD_CURRENT;
+   const datetime current_time = TimeLocal();
+
+   if(current_time > t + interval)
+     {
+      find_candles();
+      find_band();
+      t = current_time;
+     }
+  }
+//+------------------------------------------------------------------+
+void find_candles()
+  {
+
+   open0         = iOpen(_Symbol, PERIOD_CURRENT, 0);
+   high0         = iHigh(_Symbol, PERIOD_CURRENT, 0);
+   close0        = iClose(_Symbol, PERIOD_CURRENT, 0);
+   low0          = iLow(_Symbol, PERIOD_CURRENT, 0);
+
+   open1         = iOpen(_Symbol, PERIOD_CURRENT, 1);
+   close1        = iClose(_Symbol, PERIOD_CURRENT, 1);
+   low1          = iLow(_Symbol, PERIOD_CURRENT, 1);
+   high1         = iHigh(_Symbol, PERIOD_CURRENT, 1);
+
+   high2         = iHigh(_Symbol, PERIOD_CURRENT, 2);
+   close2        = iClose(_Symbol, PERIOD_CURRENT, 2);
+   open2         = iOpen(_Symbol, PERIOD_CURRENT, 2);
+   low2          = iLow(_Symbol, PERIOD_CURRENT, 2);
+
+   low3          = iLow(_Symbol, PERIOD_CURRENT, 3);
+   high3         = iHigh(_Symbol, PERIOD_CURRENT, 3);
+   open3         = iOpen(_Symbol, PERIOD_CURRENT, 3);
+   close3        = iClose(_Symbol, PERIOD_CURRENT, 3);
+
+   currenttBid   = MarketInfo(_Symbol, MODE_BID);
+   currenttAsk   = MarketInfo(_Symbol, MODE_ASK);
+   spread        = MarketInfo(_Symbol, MODE_SPREAD) * Point;
+
+  }
+//+------------------------------------------------------------------+
+double find_band()
+  {
+   double current_price = SymbolInfoDouble(_Symbol, SYMBOL_ASK); // для расчета верхней полосы  индикатора Bollinger Bands (BB).
+   double bb_upper_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 1);
+   double bb_lower_1 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 1);
+   double bb_upper_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 2);
+   double bb_lower_2 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_LOWER, 2);
+   double bb_upper_3 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 3);
+   double bb_upper_4 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 4);
+   double bb_upper_6 = iBands(_Symbol, PERIOD_CURRENT, 20, 2.0, 0, PRICE_CLOSE, MODE_UPPER, 6);
+   double middleBB = iBands(_Symbol, PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_MAIN, 1);
+   return middleBB;
+  }
+////+------------------------------------------------------------------+
+////|        Патерн БЫЧЬЕ ПОГЛАЩЕНИЕ                                   |
+////+------------------------------------------------------------------+
+//bool Signal_Buy(string symbol)
+//  {
+//// бычье поглащение
+//   if(open2 > close2 && open1 < close1&&! isPinBar())
+//     {
+//      if((high1 > high2 && low1 < low2 && open1 < close2 && close1 > open2))
+//
+//        {
+//         return true;
+//        }
+//      else
+//        {
+//         return false;
+//        }
+//     }
+//   return false;
+//  }
+////+------------------------------------------------------------------+
+////|        Патерн МЕДВЕЖЬЕ ПОГЛАЩЕНИЕ                                |
+////+------------------------------------------------------------------+
+//bool Signal_Sell(string symbol)
+//  {
+//// медвежье поглащение
+//   if(open2 < close2 && open1 > close1&& isPinBar())
+//     {
+//      if(high1 > high2 && low1 < low2 && open1 > close2 && close1 < open2)
+//
+//        {
+//         return true;
+//        }
+//      else
+//        {
+//         return false;
+//        }
+//     }
+//   return false;
+//  }
+
+//+------------------------------------------------------------------+
+//|        Патерн ==Middle_Channel_Crossing==                        |
+//+------------------------------------------------------------------+
+bool CheckCandleForTrade(string tradeType,double middle_BB1,double open_1,double close_1,double low_1,double high_1)
+  {
+   if(tradeType == "Buy" && (open1 > low1) && (open1 < close1)&&((open1 -low1) > (close1-open1)) && open1 > middleBB1 && low1 < middle_BB1)
+     {
+
+      return true; // Свеча удовлетворяет критериям Buy
+     }
+
+   else
+      if(tradeType == "Sell" && (open1 < high1) && (open1 > close1)&&((high1 - open1) > (open1- close1)) && open1 < middleBB1 && low1 > middle_BB1)
+        {
+
+         return true; // Свеча удовлетворяет критериям Sell
+        }
+   return false; // Отклонить свечу
+  }
+
+
+//+------------------------------------------------------------------+
+//|                      ==Signal Absorption==                       |
+//+------------------------------------------------------------------+
+bool Signal_Sell_structure()
+  {
+// медвежье поглащение Sell
+   if(open2 < close2 && open1 > close1)
+     {
+      if(high1 > high2 && low1 < low2 && open1 > close2 && close1 < open2)
+
+        {
+         return true;
+        }
+      else
+        {
+         return false;
+        }
+     }
+   return false;
+  }
+//-----------
+bool Signal_Buy_structure()
+  {
+// бычье поглащение Buy
+   if(open2 > close2 && open1 < close1)
+     {
+      if((high1 > high2 && low1 < low2 && open1 < close2 && close1 > open2))
+
+        {
+         return true;
+        }
+      else
+        {
+         return false;
+        }
+     }
+   return false;
+  }
+//+------------------------------------------------------------------+
+//| Calculate optimal lot size                                       |
+//+------------------------------------------------------------------+
+double LotsOptimized(double Lotts,double MaxRisk,int DFactor)
+  {
+
+
+   double lot=Lotts;
+   int    orders=HistoryTotal();     // history orders total
+   int    losses=0;                  // number of losses orders without a break
+//--- select lot size
+   lot=NormalizeDouble(AccountFreeMargin()*MaxRisk/1000.0,1);
+
+//если AccountFreeMargin() =$10 000 и  параметр MaximumRisk установлен на 2,
+// то значение переменной lot будет равно: 10 000 * 2 / 1000 = 20
+
+
+//--- calcuulate number of losses orders without a break
+   if(DFactor>0)
+     {
+      for(int i=orders-1; i>=0; i--)
+        {
+         if(OrderSelect(i,SELECT_BY_POS,MODE_HISTORY)==false)
+           {
+            Print("Error in history!");
+            break;
+           }
+         if(OrderSymbol()!=Symbol() || OrderType()>OP_SELL)
+            continue;
+         //---
+         if(OrderProfit()>0)
+            break;
+         if(OrderProfit()<0)
+            losses++;
+        }
+      if(losses>1)
+         lot=NormalizeDouble(lot-lot*losses/DFactor,1);
+      //если исходное значение переменной lot равно 20, variables losses 10 и DecreaseFactor 100
+      // значение переменной lot на выходе будет равно: 20 - 20  10 / 100 = 18
+      //Затем, если значение 18 умножить на (1 - 10 / 100), то получим:18  (1 - 10 / 100) = 16.2
+      // значение 16.2 округляется с использованием функции NormalizeDouble до одной десятой,
+      // что приводит к окончательному значению lot, равному 16.2.
+     }
+//--- return lot size
+   if(lot<1)
+      lot=5;
+   return(lot);
+  }
+//+------------------------------------------------------------------+
+//| Calculate open positions                                         |
+//+------------------------------------------------------------------+
+int CalculateCurrentOrders(string symbol, int  MAGICMA)
+  {
+   int buys=0,sells=0;
+//---
+   for(int i=0; i<OrdersTotal(); i++)
+     {
+      if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)==false)
+         break;
+      if(OrderSymbol()==Symbol() && OrderMagicNumber()== MAGICMA)
+        {
+         if(OrderType()==OP_BUY || OrderType() == OP_BUYLIMIT)
+            buys++;
+         if(OrderType()==OP_SELL || OrderType() == OP_SELLLIMIT)
+            sells++;
+        }
+     }
+//--- return orders volume
+   if(buys>0)
+      return(buys);
+   else
+      return(-sells);
+  }
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+void DrawHorizontalLine(string objName, ENUM_TIMEFRAMES time_frame, int perio_d, color lineColor)
+  {
+   double priceLow, priceHigh, priceClose;
+
+// Получаем цены
+   priceClose = Close[0];
+   timeframe = PERIOD_D1;
+   period = 10;
+
+
+   string timeframeStr = IntegerToString(timeframe);
+
+   priceLow = Low[Bars(timeframeStr, PERIOD_CURRENT)];
+   priceHigh = High[Bars(timeframeStr, period)];
+
+//- Close[0] - текущая цена закрытия бара. Чтобы получить цену закрытия на предыдущем баре, вместо 0 следует указать 1: Close[1]
+//- Low[Bars(timeframe, period)] - минимальная цена открытия для последнего бара, находящегося на заданном временном периоде.
+//- High[Bars(timeframe, period)]- максимальная цена закрытия для последнего бара на заданном временном периоде.
+
+//Функция Bars используется для получения количества баров для указанного временного периода и периода в
+//заданном числе ожидаемых баров. Оба параметра времени и число баров используются, чтобы рассчитать количество баров,
+//необходимое для отображения информации за указанный период времени. В данном случае Bars(timeframe, period)
+// используется для получения количества баров для заданного временного периода и периода в стандартных пятидесятибаровых свечах,
+//необходимых для получения информации о ценах в указанном периоде времени.
+
+
+// Вычисляем координаты линии
+
+
+
+
+   double y1 = NormalizeDouble(priceLow, Digits);
+   double y2 = NormalizeDouble(priceHigh, Digits);
+   int x1 = (int)iTime(_Symbol, timeframe, period) + PeriodSeconds(timeframe);
+
+   int  x2 = x1;
+
+// Создаем объект
+   ObjectCreate(objName, OBJ_HLINE, 0, x1, y1, x2, y2);
+
+// Задаем цвет
+   ObjectSet(objName, OBJPROP_COLOR, lineColor);
+  }
+//ENUM_TIMEFRAMES - это перечисление всех доступных временных периодов (таймфреймов)
+// в терминале MetaTrader 4. Оно содержит следующие значения (периоды):
+
+///- PERIOD_CURRENT - текущий период (типично, это M1)
+//- PERIOD_M1 - 1 минута
+//- PERIOD_M5 - 5 минут
+//- PERIOD_M15 - 15 минут
+//- PERIOD_M30 - 30 минут
+//- PERIOD_H1 - 1 час
+//- PERIOD_H4 - 4 часа
+//- PERIOD_D1 - 1 день
+//- PERIOD_W1 - 1 неделя
+//- PERIOD_MN1 - 1 месяц
+
+//В функции DrawHorizontalLine параметр timeframe используется для указания временного периода на графике,
+// на котором будет нарисована линия. Он должен быть одним из периодов из перечисления ENUM_TIMEFRAMES.
+
+
+
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+
+datetime lastTickTime; // переменная для хранения времени последнего тика
+double highestClose; // переменная для хранения уровня самого высокого закрытия за период N
+double lowestClose; // переменная для хранения уровня самого низкого закрытия за период N
+int period = 10; // число свечей, за которые необходимо найти уровни
+ENUM_TIMEFRAMES timeframe = PERIOD_H1; // таймфрейм, на котором будет производиться работа с уровнями закрытия
+
+
+
+datetime currentTickTime = iTime(_Symbol, timeframe, 0);
+
+
+
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|SetClosingLevels function                                         |
+//|Функция для нахождения уровней самого высокого и низкого Close за |
+//|последние N свечей на заданном таймфрейме                         |
+//+------------------------------------------------------------------+
+class ClosingLevels
+  {
+private:
+   int                period;
+   ENUM_TIMEFRAMES    timeframe;
+   double             lowestLow ;
+   double             highestHigh ;
+   double             lowestClose ;
+   double             highestClose ;
+   datetime           periodEnd; // добавлена переменная periodEnd
+
+public:
+                     ClosingLevels(int _period, ENUM_TIMEFRAMES _timeframe)
+     {
+      period = _period;
+      timeframe = _timeframe;
+     }
+
+   double            GetHighestClose()
+     {
+      double currentClose;
+      highestClose = -1e10;
+      for(int i = period - 1; i >= 0; --i)
+        {
+         currentClose = iClose(_Symbol, timeframe, i);
+         if(currentClose > highestClose)
+           {
+            highestClose = currentClose;
+           }
+        }
+      return highestClose;
+     }
+
+   double            GetLowestClose()
+     {
+      double currentClose;
+      lowestClose = iClose(_Symbol, timeframe, period-1);
+      for(int i = period - 2; i >= 0; --i)   // начинаем с элемента period - 2
+        {
+         currentClose = iClose(_Symbol, timeframe, i);
+         if(currentClose < lowestClose)
+           {
+            lowestClose = currentClose;
+           }
+        }
+      return lowestClose;
+     }
+
+   double            GetHighestHigh()
+     {
+      double currentHigh;
+      highestHigh = -1e10;
+      for(int i = period-1; i >= 0; --i)
+        {
+         currentHigh = iHigh(_Symbol, timeframe, i);
+         if(currentHigh > highestHigh)
+           {
+            highestHigh = currentHigh;
+           }
+        }
+      return highestHigh;
+     }
+
+   double            GetLowestLow()
+     {
+      double currentLow;
+      lowestLow = 1e10;
+      for(int i = period-1; i >= 0; --i)
+        {
+         currentLow = iLow(_Symbol, timeframe, i);
+         if(currentLow < lowestLow)
+           {
+            lowestLow = currentLow;
+           }
+        }
+      return lowestLow;
+
+     }
+   void              Reset()
+     {
+      lowestLow = 0.0;
+      highestHigh = 0.0;
+      lowestClose = 0.0;
+      highestClose = 0.0;
+     }
+  };
+
+
+//+------------------------------------------------------------------+
+void DrawHorizontalLines(double hClose,double lClose, double hHigh, double lLow)
+  {
+   ResetLastError();
+// Имя объекта для уровня самого высокого закрытия
+   string hCloseName = "hClose";
+// Имя объекта для уровня самого низкого закрытия
+   string lCloseName = "lClose";
+// Имя объекта для уровня самого высокого закрытия
+   string hHighName = "hHigh";
+// Имя объекта для уровня самого низкого закрытия
+   string lLowName = "lLow";
+
+// Номер окна, на котором будут созданы линии
+   int chartWindow = 0;
+
+// Устанавливаем цвета для линий
+   color hCloseColor = Red;
+   color lCloseColor = Lime;
+   color hHighColor = Red;
+   color lLowColor = Lime;
+
+
+
+// Находим координаты точек, от которых будут создаваться линии
+   double priceDiff = MarketInfo(_Symbol, MODE_POINT);
+   int hHighY = (int)(hHigh / priceDiff);
+   int hCloseY = (int)(hHigh / priceDiff);
+   int lCloseY = (int)(lowestClose / priceDiff);
+   int lLowY = (int)(lowestClose / priceDiff);
+
+   double hHighX = (double)iTime(_Symbol, PERIOD_CURRENT, 0);
+   double hCloseX = (double)iTime(_Symbol, PERIOD_CURRENT, 0);
+   double lCloseX = (double)iTime(_Symbol, PERIOD_CURRENT, 0);
+   double lLowX = (double)iTime(_Symbol, PERIOD_CURRENT, 0);
+
+// Проверяем, существуют ли линии уже на графике, и создаем новые линии, если их нет
+   if(!ObjectFind(hCloseName))
+     {
+      ObjectCreate(hCloseName, OBJ_HLINE, chartWindow, 0, hCloseColor);
+      ObjectSet(hCloseName, OBJPROP_COLOR, hCloseColor);
+     }
+
+   if(!ObjectFind(lCloseName))
+     {
+      ObjectCreate(lCloseName, OBJ_HLINE, chartWindow, 0, lCloseColor);
+      ObjectSet(lCloseName, OBJPROP_COLOR, lCloseColor);
+     }
+
+   if(!ObjectFind(hHighName))
+     {
+      ObjectCreate(hHighName, OBJ_HLINE, chartWindow, 0, hHighColor);
+      ObjectSet(hHighName, OBJPROP_COLOR, hHighColor);
+     }
+
+   if(!ObjectFind(lLowName))
+     {
+      ObjectCreate(lLowName, OBJ_HLINE, chartWindow, 0, lLowColor);
+      ObjectSet(lLowName, OBJPROP_COLOR, lLowColor);
+     }
+
+// Обновляем параметры существующих линий
+   ObjectSet(hCloseName, OBJPROP_PRICE, hClose);
+   ObjectSet(hCloseName, OBJPROP_TIME1, hCloseX);
+
+   ObjectSet(lCloseName, OBJPROP_PRICE, lClose);
+   ObjectSet(lCloseName, OBJPROP_TIME1, lCloseX);
+
+   ObjectSet(hHighName, OBJPROP_PRICE, hHigh);
+   ObjectSet(hHighName, OBJPROP_TIME1, hHighX);
+
+   ObjectSet(lLowName, OBJPROP_PRICE, lLow);
+   ObjectSet(lLowName, OBJPROP_TIME1, lLowX);
+  }
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//+               рисование уровней                                  |
+//+------------------------------------------------------------------+
+void Draw_level(double hClose,double lClose, double hHigh, double lLow)
+
+  {
+   static double prev_hClose = 0;
+   static double prev_lClose = 0;
+   static double prev_hHigh = 0;
+   static double prev_lLow = 0;
+
+// Удаляем предыдущую линию
+   if(prev_hClose != 0 && prev_lClose != 0 && prev_hHigh != 0 && prev_lLow != 0)
+
+
+     {
+      ObjectDelete("hClose_level");
+      ObjectDelete("lClose_level");
+      ObjectDelete("hHigh_level");
+      ObjectDelete("lLow_level");
+     }
+
+// Рисуем новую линию на текущем уровне цены
+   string hClose_name = "hClose_level";
+
+   ObjectCreate(hClose_name, OBJ_HLINE, 0, 0, hClose);
+   ObjectSet(hClose_name, OBJPROP_COLOR, Red);
+   ObjectSet(hClose_name, OBJPROP_WIDTH, 1);
+
+   string lClose_name = "lClose_level";
+
+   ObjectCreate(lClose_name, OBJ_HLINE, 0, 0, lClose);
+   ObjectSet(lClose_name, OBJPROP_COLOR, Green);
+   ObjectSet(lClose_name, OBJPROP_WIDTH, 1);
+
+   string hHigh_name = "hHigh_level";
+
+   ObjectCreate(hHigh_name, OBJ_HLINE, 0, 0, hHigh);
+   ObjectSet(hHigh_name, OBJPROP_COLOR, Red);
+   ObjectSet(hHigh_name, OBJPROP_WIDTH, 1);
+
+   string lLow_name = "lLow_level";
+
+   ObjectCreate(lLow_name, OBJ_HLINE, 0, 0, lLow);
+   ObjectSet(lLow_name, OBJPROP_COLOR, Green);
+   ObjectSet(lLow_name, OBJPROP_WIDTH, 1);
+
+// Сохраняем текущее значение цены для следующей итерации
+   prev_hClose = hClose;
+   prev_lClose = lClose;
+   prev_hHigh = hHigh;
+   prev_lLow = lLow;
+  }
+//+------------------------------------------------------------------+
+//+               Проверка на тренд                                  |
+//+------------------------------------------------------------------+
+bool CheckPriceAboveMA(double MAdouble,double CcurrentPrice)
+  {
+
+   if(CcurrentPrice > MAdouble)
+      return true;
+   else
+      return false;
+  }
+//+------------------------------------------------------------------+
+//+              Разница между MA                                    С
+//+------------------------------------------------------------------+
+double GetMaDifference(double MA_5,double MA_30)
+  {
+
+   double PriceDifference = 0;
+
+   if(MA_5 > MA_30)
+      PriceDifference = MA_5 - MA_30;
+   else
+      PriceDifference = MA_30 - MA_5;
+
+   return (PriceDifference);
+  }
+//+------------------------------------------------------------------+
+//+             Тест пробоя на Buy                                   |
+//+------------------------------------------------------------------+
+bool CheckBuyBreakout(double hiHighh,double curBid)
+  {
+
+   if(curBid >= hiHighh)
+      return true;
+   else
+      return false;
+  }
+//+------------------------------------------------------------------+
+//+             Тест пробоя на Sell                                  |
+//+------------------------------------------------------------------+
+bool CheckSellBreakout(double loLoww,  double curAsk)
+  {
+   if(curAsk < loLoww)
+      return true;
+   else
+      return false;
+  }
+
+//+------------------------------------------------------------------+
+//+             Расчет торгового лота                                |
+//+------------------------------------------------------------------+
+double CalculateLotSize(int op_type, double entryPrice, double stopLoss, double risk)
+  {
+   double lot_min = MarketInfo(Symbol(),MODE_MINLOT);
+   double lot_max = MarketInfo(Symbol(),MODE_MAXLOT);
+   double lot_step =MarketInfo(Symbol(),MODE_LOTSTEP);
+   double riskAmount = AccountBalance() * risk / 100.0;
+   double pipValue = (entryPrice - stopLoss) * MarketInfo(Symbol(), MODE_TICKVALUE);
+   double lotSize = riskAmount / pipValue;
+
+
+   if(lotSize<lot_min)
+      lotSize = lot_min;
+   if(lotSize >lot_max)
+      lotSize = lot_max;
+//
+//   if((AccountFreeMarginCheck(Symbol(),op_type,lotSize))<10 ||(GetLastError() == ERR_NOT_ENOUGH_MONEY))
+//     {
+//      Alert("Невозможно открыть позицию с обьемом =  " + DoubleToStr(lotSize,2)," Недостаточно СРЕДСТВ!!");
+//      return -1;
+//
+//     }
+   return NormalizeDouble(lotSize, 2);
+
+  }
+//+------------------------------------------------------------------+
+//+             Расчет торгового лота                                |
+//+------------------------------------------------------------------+
+double LotsByRisk(int op_type,double entryPrice, double stopLoss,double riSk,double initialBalance)
+
+  {
+
+   int    Sl       = (int)NormalizeDouble((MathAbs(stopLoss - entryPrice) / Point),0);
+   double lot_min  = MarketInfo(Symbol(),MODE_MINLOT);
+   double lot_max  = MarketInfo(Symbol(),MODE_MAXLOT);
+   double lot_step = MarketInfo(Symbol(),MODE_LOTSTEP);
+   double lotcoast = MarketInfo(Symbol(),MODE_TICKVALUE);
+
+   double lot =0;
+   double UsdPerPip =0;
+   if(initialBalance >= AccountBalance()/1.5)
+     {
+      lot = AccountBalance()*riSk/100;
+      UsdPerPip = lot/Sl;
+
+      lot = NormalizeDouble(UsdPerPip/lotcoast,2);
+      lot = NormalizeDouble(lot/lot_step,0)*lot_step;
+     }
+    else 
+    {
+     lot = AccountBalance()*riSk/2/100;
+      UsdPerPip = lot/Sl;
+
+      lot = NormalizeDouble(UsdPerPip/lotcoast,2);
+      lot = NormalizeDouble(lot/lot_step,0)*lot_step;
+    
+    }
+//   if(lot<lot_min)
+//      lot = lot_min;
+//   if(lot >lot_max)
+//      lot = lot_max;
+//
+//   if((AccountFreeMarginCheck(Symbol(),op_type,lot))<10 ||(GetLastError() == ERR_NOT_ENOUGH_MONEY))
+//     {
+//      Alert("Невозможно открыть позицию с обьемом =  " + DoubleToStr(lot,2)," Недостаточно СРЕДСТВ!!");
+//      return -1;
+//
+//     }
+   return lot;
+
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+bool RealStopLoss(double Price,double stoppLoss, double Loses)
+//1. Получить текущий баланс счета с помощью функции AccountBalance():
+  {
+   double balance = AccountBalance();
+
+//2. Вычислить % от текущего баланса:
+
+   double max_loss = balance * Loses;
+
+//3. Вычислить результат на основе заданного выражения:
+
+
+   double lot_cost = MarketInfo(Symbol(), MODE_TICKVALUE);
+   double loss = MathAbs(Price - stoppLoss) * lot_cost;
+   Print("размеры параматров loss и max_loss  ",loss,"   ",max_loss);
+//4. Сравнить вычисленное значение с максимально допустимым убытком:
+
+   if(loss <= max_loss)
+     {
+      Print("размеры параматров loss и max_loss  ",loss,"   ",max_loss);
+      return true;
+     }
+   else
+      return false;
+  }
+
+//+------------------------------------------------------------------+
+//+               рисование уровней   для Scalper M15                |
+//+------------------------------------------------------------------+
+class DrawLevelScalper
+  {
+public:
+   double            h4_high;
+   double            h4_low;
+
+private:
+   double            h4_low_8_00 ;
+   double            h4_high_0_00;
+   double            h4_high_8_00 ;
+   double            h4_low_0_00;
+   string            hHigh_name;
+   string            lLow_name;
+   double            prev_hHigh;
+   double            prev_lLow;
+
+public:
+                     DrawLevelScalper()
+     {
+      prev_hHigh = 0;
+      prev_lLow = 0;
+      hHigh_name = "hHigh_level";
+      lLow_name = "lLow_level";
+     }
+
+                    ~DrawLevelScalper()
+     {
+      if(prev_hHigh != 0 && prev_lLow != 0)
+        {
+         ObjectDelete(hHigh_name);
+         ObjectDelete(lLow_name);
+        }
+     }
+
+   void              Draw()
+     {
+      datetime previousDate = 0;
+      datetime currentDate = TimeLocal();
+      int currentDay = TimeDay(currentDate);
+
+      if(currentDay != TimeDay(previousDate))
+        {
+         // Удаление предыдущего объекта даты, если он существует
+         if(ObjectFind("DateObject") != -1)
+            ObjectDelete("DateObject");
+
+         // Создание нового объекта даты
+         ObjectCreate("DateObject", OBJ_LABEL, 0, Time[0], Low[0]);
+         ObjectSetText("DateObject", "Дата: " + TimeToString(currentDate, TIME_DATE), 10, "Arial", clrWhite);
+
+         // Обновление предыдущей даты
+         previousDate = currentDate;
+        }
+      datetime curentTime = TimeLocal();
+
+      if(TimeHour(curentTime) >= 0 && TimeHour(curentTime) <= 8)
+        {
+         datetime current_candle_start = TimeCurrent() - (TimeCurrent() % PeriodSeconds(PERIOD_H4));
+         datetime target_8_00 = StrToTime(TimeToStr(current_candle_start, TIME_DATE) + " 8:00");
+         datetime target_0_00 = StrToTime(TimeToStr(current_candle_start, TIME_DATE) + " 00:00");
+         int target_8_00_candle_index = iBarShift(_Symbol, PERIOD_H4, target_8_00, false);
+         int target_0_00_candle_index = iBarShift(_Symbol, PERIOD_H4, target_0_00, false);
+
+         if(target_8_00_candle_index < 0 || target_0_00_candle_index < 0)
+           {
+            Print("Ошибка: Не найдено свечей H4, начинающихся в 8:00 утра и в 0:00");
+           }
+         else
+           {
+            h4_low_8_00 = iLow(_Symbol, PERIOD_H4, target_8_00_candle_index);
+            h4_high_8_00 = iHigh(_Symbol, PERIOD_H4, target_8_00_candle_index);
+
+            h4_high_0_00 = iHigh(_Symbol, PERIOD_H4, target_0_00_candle_index);
+            h4_low_0_00 = iLow(_Symbol, PERIOD_H4, target_0_00_candle_index);
+           }
+
+         if(h4_high_8_00 < h4_high_0_00)
+            h4_high = h4_high_0_00;
+         else
+            h4_high = h4_high_8_00;
+
+         if(h4_low_8_00 > h4_low_0_00)
+            h4_low = h4_low_0_00;
+         else
+            h4_low = h4_low_8_00;
+
+         Comment(h4_high,"  =>h4_high ",h4_low,"  =>h4_low ");
+         if(prev_hHigh != 0 && prev_lLow != 0)
+           {
+            ObjectDelete(hHigh_name);
+            ObjectDelete(lLow_name);
+           }
+
+         ObjectCreate(hHigh_name, OBJ_HLINE, 0, 0, h4_high);
+         ObjectSet(hHigh_name, OBJPROP_COLOR, Red);
+         ObjectSet(hHigh_name, OBJPROP_WIDTH, 1);
+
+         ObjectCreate(lLow_name, OBJ_HLINE, 0, 0, h4_low);
+         ObjectSet(lLow_name, OBJPROP_COLOR, Green);
+         ObjectSet(lLow_name, OBJPROP_WIDTH, 1);
+
+         prev_hHigh = h4_high;
+         prev_lLow = h4_low;
+        }
+
+      // Обновление текущего времени
+      curentTime = TimeLocal();
+
+      // Задержка между итерациями цикла
+      Sleep(1000); // 1 секунда
+     }
+
+  };
+//+------------------------------------------------------------------+
+
+//+-------------------------------------------------------------------------------------------------+
+//+               рисование уровней   для Scalper M15 (и для любых в точках времени  )              |
+//+-------------------------------------------------------------------------------------------------+
+// DashedLines class definition
+class DashedLines
+  {
+public:
+   double            upperLevel;
+   double            lowerLevel;
+   color             upperColor;
+   color             lowerColor;
+   int               lineStyle;
+   int               lineThickness;
+
+public:
+                     DashedLines()
+     {
+      lineStyle = STYLE_DOT;
+      lineThickness = 1;
+
+      CalculateLevels();
+      DrawLines();
+     }
+
+   void              CalculateLevels()
+     {
+      int startIndex = iBarShift(NULL, PERIOD_M15, StrToTime("00:00"));
+      int endIndex = iBarShift(NULL, PERIOD_M15, StrToTime("07:45"));
+      double highStart = iHigh(NULL, PERIOD_M15, startIndex);
+      double lowStart = iLow(NULL, PERIOD_M15, startIndex);
+      double highEnd = iHigh(NULL, PERIOD_M15, endIndex);
+      double lowEnd = iLow(NULL, PERIOD_M15, endIndex);
+
+      if(highStart > highEnd)
+         upperLevel = highStart;
+      else
+         upperLevel = highEnd;
+
+      if(lowStart > lowEnd)
+         lowerLevel = lowEnd;
+      else
+         lowerLevel = lowStart;
+     }
+
+   void              DrawLines()
+     {
+      ObjectDelete("UpperLine");
+      ObjectDelete("LowerLine");
+
+      ObjectCreate("UpperLine", OBJ_HLINE, 0, Time[0], upperLevel);
+      ObjectSet("UpperLine", OBJPROP_STYLE, lineStyle);
+      ObjectSet("UpperLine", OBJPROP_WIDTH, lineThickness);
+      ObjectSet("UpperLine", OBJPROP_COLOR, upperColor);
+
+      ObjectCreate("LowerLine", OBJ_HLINE, 0, Time[0], lowerLevel);
+      ObjectSet("LowerLine", OBJPROP_STYLE, lineStyle);
+      ObjectSet("LowerLine", OBJPROP_WIDTH, lineThickness);
+      ObjectSet("LowerLine", OBJPROP_COLOR, lowerColor);
+     }
+  };
+//------------------------------------------------+
+// получения значений nearestMin и nearestMax:    |
+//------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+class NearestMinMax
+  {
+private:
+   double            nearestMin;
+   double            nearestMax;
+
+public:
+                     NearestMinMax()
+     {
+      nearestMin = 0.0;
+      nearestMax = 0.0;
+     }
+
+   void              FindNearestMinMax(const int candleIndex)
+     {
+      double minValue = iLow(_Symbol, 0, candleIndex);   // Значение текущего минимума
+      double maxValue = iHigh(_Symbol, 0, candleIndex);  // Значение текущего максимума
+
+      for(int i = candleIndex - 1; i >= 0; i--)
+        {
+         double lowValue = iLow(_Symbol, 0, i);
+         if(lowValue < minValue)
+           {
+            nearestMin = minValue;
+            break;
+           }
+         else
+           {
+            minValue = lowValue;
+           }
+        }
+
+      for(int i = candleIndex - 1; i >= 0; i--)
+        {
+         double highValue = iHigh(_Symbol, 0, i);
+         if(highValue > maxValue)
+           {
+            nearestMax = maxValue;
+            break;
+           }
+         else
+           {
+            maxValue = highValue;
+           }
+        }
+     }
+
+   double            Min()
+     {
+      return nearestMin;
+     }
+
+   double            Max()
+     {
+      return nearestMax;
+     }
+  };
+
+//-------------------------------------------------------------------------------+
+// среднего значения расстояний между Low и High свечей за определенный период.  |
+//-------------------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+double AvgRange(int interval)
+  {
+   double sum = 0;
+
+   for(int i=1; i < interval; i++)
+     {
+      double range = High[i] - Low[i];
+      sum += range;
+     }
+
+   double average = sum / interval;
+
+   return average;
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+double AvgRangeBody(int interval)
+  {
+   double sum = 0;
+   double Body = 0;
+   double cLose1 = iClose(_Symbol, 0, 1);
+   double oPen1 = iOpen(_Symbol, 0, 1);
+   for(int i = 0; i < interval; i++)
+     {
+      Body = NormalizeDouble(MathAbs(cLose1 - oPen1),5);
+      sum += Body;
+     }
+
+   double average = sum / period;
+
+   return average;
+  }
+//----------------------------------------------------------+
+// среднего значения обьема свечей за определенный период.  |
+//----------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+double maxVolume(int interval)
+  {
+   double max = 0;
+
+   for(int i = 1; i < interval; i++)
+     {
+      double range = NormalizeDouble(iVolume(Symbol(), Period(), i),5);
+      if(range > max)
+         max = range;
+     }
+   return max;
+  }
+
+//+------------------------------------------------------------------+
+//|          Задаем дату аспирации в количестве дней                 |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//void expirationDate(int orderTicket,int expirationDays)
+////использованием функции OrderSelect() и неправильным объявлением переменных orderTicket и expirationDate. Ниже приведен исправленный код:
+//
+//// Получаем номер ордера
+////int orderTicket = OrderTicket(); // Измените это на актуальное значение номера ордера
+//
+//// Задаем дату аспирации в количестве дней
+////int expirationDays = 5;
+//datetime expirationDate = TimeCurrent() + expirationDays * 24 * 60 * 60; // Дата аспирации от текущего времени вперед на указанное количество дней
+//
+//// Устанавливаем дату аспирации ордера
+//if(OrderSelect(orderTicket, SELECT_BY_TICKET))
+//  {
+//   OrderExpires(expirationDate);
+//  }
+//
+//// Проверяем, закрыт ли дневной ордер по истечению даты аспирации
+//if(OrderCloseTime() > expirationDate)
+//  {
+//   if(!OrderClose(OrderTicket(), OrderLots(), MarketInfo(OrderSymbol(), MODE_BID), 0, clrRed))
+//     {
+//
+//      // Обработка ошибки закрытия ордера
+//      Print("Ошибка при закрытии ордера: ", GetLastError());
+//     }
+//  }
+//  }
+//
+
+//OrderSelect() теперь используется внутри условия if для проверки его успешного выполнения. Обратите внимание, что перед вызовом OrderSelect() вы должны получить номер ордера с помощью OrderTicket().
+
+//Теперь функция OrderExpires(expirationDate) будет вызвана, если OrderSelect() выполнится успешно.
+//+--------------------------------------------------------------------------------------------------------------------------+
+//|        для размещения отложенного ордера на покупку ниже текущей цены и ордера на продажу выше текущей цены:           |
+//+--------------------------------------------------------------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+// Отложенный ордер Buy Limit
+//double buyLimitPrice = Bid - Point * 10; // Устанавливаем цену на 10 пунктов ниже текущего Bid
+//double slippage = 5; // Значение проскальзывания (slippage) в пунктах
+//
+//int ticketBuyLimit = OrderSend(_Symbol, OP_BUYLIMIT, 0.01, buyLimitPrice, slippage, 0, 0, "", 777, 0, Blue);
+//
+//// Отложенный ордер Sell Limit
+//double sellLimitPrice = Ask + Point * 10; // Устанавливаем цену на 10 пунктов выше текущего Ask
+//
+//int ticketSellLimit = OrderSend(_Symbol, OP_SELLLIMIT, 0.01, sellLimitPrice, slippage, 0, 0, "", 777, 0, Red);
+
+
+
+//+------------------------------------------------------------------+
+//|           Flat на графике                                        |
+//+------------------------------------------------------------------+
+bool isFlat()
+  {
+   int perIod = 10; // Период для расчета стандартного отклонения
+   int limit = MathMax(period, Bars);
+
+   double sum = 0;
+   double avg = 0;
+   double deviation = 0;
+
+   for(int i = limit - 1; i >= 0; i--)
+     {
+      sum += iClose(NULL, 0, i);
+     }
+
+   avg = sum / limit;
+
+   for(int i = limit - 1; i >= 0; i--)
+     {
+      deviation += MathPow(iClose(NULL, 0, i) - avg, 2);
+     }
+
+   deviation = MathSqrt(deviation / limit);
+
+   double threshold = 0.0005; // Порог для определения "flat"
+
+   if(deviation <= threshold)
+     {
+      return true; // График является "flat"
+     }
+   else
+     {
+      return false; // График не является "flat"
+     }
+  }
+
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void CloseOrderIfPriceEquals(double Price)
+  {
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+
+         if(Bid == Price)
+           {
+            if(OrderClose(OrderTicket(), OrderLots(), Bid, 10))
+              {
+               Print("Закрыт ордер ", OrderTicket(), " по цене ", Price);
+              }
+            else
+              {
+               Print("Ошибка при закрытии ордера: ", GetLastError());
+              }
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+void CloseOrdersAtTime(const int hour, const int minute)
+  {
+   int totalOrders = OrdersTotal();
+
+   for(int i=totalOrders-1; i>=0; i--)
+     {
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+         if(OrderSymbol() == Symbol())
+           {
+            datetime orderTime = OrderOpenTime();
+            int orderHour = TimeHour(orderTime);
+            int orderMinute = TimeMinute(orderTime);
+
+            if(orderHour == hour && orderMinute == minute)
+              {
+               bool result = OrderClose(OrderTicket(), OrderLots(), Bid, 0, clrRed);
+
+               if(result)
+                 {
+                  Print("Ордер ", OrderTicket(), " успешно закрыт");
+                 }
+               else
+                 {
+                  Print("Ошибка при закрытии ордера ", OrderTicket());
+                 }
+              }
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+string  previousData1;
+//      string  previousData2 ;
+//      //--- обновляем предыдущий день
+//      previousData1 =DoubleToString(AvgRange(count),6);
+//      previousData2 =DoubleToString(atr1,6);
+//      //--- создаем объект даты
+//      ObjectCreate(0, "DateLabe2", OBJ_LABEL, 0, 0, 0);
+//      ObjectCreate(0, "DateLabe1", OBJ_LABEL, 0, 0, 0);
+//      //--- устанавливаем текст и позицию объекта
+//      ObjectSetText("DateLabel","Среднее  -" + previousData1,25, "Arial", clrDarkOrange);
+//      ObjectSet("DateLabel", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+//      ObjectSetInteger(1, "example_object", OBJPROP_XDISTANCE, 5); // Расстояние по оси X
+//      ObjectSetInteger(1, "example_object", OBJPROP_YDISTANCE, 10); // Расстояние по оси Y
+//
+//      ObjectSetText("DateLabe2","Текущее  -" + previousData2,25, "Arial", clrDarkOrange);
+//      ObjectSet("DateLabe2", OBJPROP_CORNER, CORNER_RIGHT_UPPER);
+//      ObjectSetInteger(0, "example_object", OBJPROP_XDISTANCE, 15); // Расстояние по оси X
+//      ObjectSetInteger(0, "example_object", OBJPROP_YDISTANCE, 25); // Расстояние по оси Y
+//
+//      datetime lastData = 0; // Переменная для хранения предыдущей даты
+//      int labelID; // Идентификатор объекта ярлыка
+//      datetime lastData1 = 0; // Переменная для хранения предыдущей даты
+//      int labelID1; // Идентификатор объекта ярлыка
+//      if((ObjectFind(0, "example_label") != -1)&&(ObjectFind(0, "example_label") != -1))  // Проверка наличия предыдущего объекта ярлыка
+//        {
+//         // Удаление предыдущего объекта ярлыка
+//         ObjectDelete(0, "example_label");
+//         ObjectDelete(0, "example_labe2");
+//        }
+//
+//      // Создание нового объекта ярлыка
+//      labelID = ObjectCreate(0, "example_label", OBJ_LABEL, 12, 12, 12);
+//      labelID1 = ObjectCreate(0, "example_labe2", OBJ_LABEL, 0, 0, 0);
+//      ObjectSetString(0, "example_label", OBJPROP_TEXT, "AvgRange: " + DoubleToString(atr,5));
+//      ObjectSetString(0, "example_labe2", OBJPROP_TEXT, "AvgRange: " + DoubleToString(atr1,5));
+//
+//      // Задание координат вывода объекта
+//      int newX = 15; // Новая координата X
+//      int newY = 25; // Новая координата Y
+//      ObjectSetInteger(0, "example_label", OBJPROP_XDISTANCE, newX);
+//      ObjectSetInteger(0, "example_label", OBJPROP_YDISTANCE, newY);
+//      int newX1 = 5; // Новая координата X
+//      int newY1 = 10; // Новая координата Y
+//      ObjectSetInteger(0, "example_label", OBJPROP_XDISTANCE, newX1);
+//      ObjectSetInteger(0, "example_label", OBJPROP_YDISTANCE, newY1);
+//
+//      lastData = atr; // Обновление переменной с предыдущей датой
+//      lastData1 = atr1; // Обновление переменной с предыдущей датой
+//В MQL4, цвета могут быть представлены с помощью предопределенных констант. Вот некоторые из наиболее распространенных цветов и их соответствующие названия:
+//
+//- Red (красный)
+//- Green (зеленый)
+//- Blue (синий)
+//- Yellow (желтый)
+//- Orange (оранжевый)
+//- Magenta (пурпурный)
+//- Cyan (голубой)
+//- Maroon (темно-красный)
+//- Lime (ярко-зеленый)
+//- Navy (темно-синий)
+//- Olive (оливковый)
+//- Purple (фиолетовый)
+//- Teal (темно-голубой)
+//- Silver (серебряный)
+//- Gray (серый)
+//- White (белый)
+//- Black (черный)
+//
+//Вы можете использовать эти названия констант вместо числовых значений для указания цветов при рисовании объектов графика, настройке свойств объектов и т.д. Например:
+//
+//ObjectSet("MyObject", OBJPROP_COLOR, Red);
+//
+//
+//В этом примере свойство цвета объекта "MyObject" устанавливается как красный (Red).
+
+
+
+
+
+
+//+---------------------------------------------------------------------------------------------------------------------------+
+//|  //функции нахождения среднего значения разницы между нижней и верхней границами полос Болинджера для заданного периода:                                                                |
+//+---------------------------------------------------------------------------------------------------------------------------+
+double CalculateAverageBandWidth(int periOd)
+  {
+   double sumBandWidth = 0;
+   int couunt = 0;
+
+   for(int i = 0; i < periOd ; i++)
+     {
+      double lowerBand = iBands(Symbol(), PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_LOWER, i);
+      double upperBand = iBands(Symbol(), PERIOD_CURRENT, 20, 2, 0, PRICE_CLOSE, MODE_UPPER, i);
+
+      double bandWidth = upperBand - lowerBand;
+      sumBandWidth += bandWidth;
+      couunt++;
+     }
+
+   double averageBandWidth = sumBandWidth / couunt;
+   return averageBandWidth;
+  }
+//+------------------------------------------------------------------+
+int isPPR(int i)
+  {
+   if(Close [i]   <  Low  [i+1]       &&
+      Close[i+1]  >  Open[i+1]        &&
+      Open[i]     >  Close[i])
+
+      return 1; //медвежий PPR
+
+
+   if(Close [i]   >  High  [i+1]      &&
+      Close[i+1]  <  Open[i+1]        &&
+      Open[i]     <  Close[i])
+
+      return 2; //бычий PPR
+
+   else
+      return 0;
+  }
+//+------------------------------------------------------------------+
+class CandleRank
+  {
+private:
+   int               candleIndex;
+   int               candlesCount;
+
+public:
+                     CandleRank(int index, int coUnt)
+     {
+      candleIndex = index;
+      candlesCount = coUnt;
+     }
+
+   bool              IsHighMax()
+     {
+      double candleHigh = High[candleIndex];
+
+      for(int i = candleIndex + 1; i <= candleIndex + candlesCount; i++)
+        {
+         if(High[i] >= candleHigh)
+            return false;
+        }
+
+      return true;
+     }
+
+   bool              IsLowMin()
+     {
+      double candleLow = Low[candleIndex];
+
+      for(int i = candleIndex + 1; i <= candleIndex + candlesCount; i++)
+        {
+         if(Low[i] <= candleLow)
+            return false;
+        }
+
+      return true;
+     }
+  };
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+void DeleteUntriggeredOrders()
+  {
+// Цикл по всем отложенным ордерам
+   for(int i = OrdersTotal() - 1; i >= 0; i--)
+     {
+      // Цикл по всем отложенным ордерам
+      if(OrderSelect(i, SELECT_BY_POS,MODE_OPEN))
+        {
+         // Проверка типа ордера
+         if(OrderType() == OP_BUYSTOP || OrderType() == OP_SELLSTOP)
+           {
+            bool isOrderOpened = false;
+            bool shouldDeleteOrder = false;
+
+            // Проверка наличия открытого ордера противоположного типа
+            for(int j = OrdersTotal() - 1; j >= 0; j--)
+              {
+               if(OrderSelect(j, SELECT_BY_POS,MODE_TRADES))
+                 {
+                  // Проверка типа и символа ордера
+                  if((OrderType() == OP_SELL ||(OrderType() == OP_BUY)) && OrderSymbol() == Symbol())
+                    {
+                     isOrderOpened = true;
+                     break;
+                    }
+                 }
+              }
+
+            // Удаление ордера, если не был открыт, и только если отложенный ордер не активирован
+            if(!isOrderOpened && !OrderOpenPrice())
+              {
+
+               if(!OrderDelete(OrderTicket()))
+                 {
+                  Print("Failed to delete order: ", GetLastError());
+                 }
+               else
+                 {
+                  Print("Deleted order: ", OrderTicket());
+                 }
+              }
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+//double FindLevel(int N)
+//  {
+//  public double leveHigh;
+//  public double leveLow;
+//
+//   for(int i = 1; i <= N; i++)
+//     {
+//      double currentHigh   = iHigh(_Symbol, 0, i);
+//      double currentLow    = iLow(_Symbol, 0, i);
+//      double currentClose  = iClose(_Symbol, 0, i);
+//      double currentOpen   = iOpen(_Symbol, 0, i);
+//
+//      int countHigh = 1;
+//      int countLow = 1;
+//      int countClose = 1;
+//      int countOpen = 1;
+//
+//      for(int j = 1; j <= N; j++)
+//        {
+//         if(j != i)
+//           {
+//            if( NormalizeDouble(iHigh(_Symbol, 0, j),4)  == NormalizeDouble( currentHigh,4))
+//               countHigh++;
+//            if( NormalizeDouble(iLow(_Symbol, 0, j),4)   ==NormalizeDouble( currentLow,4))
+//               countLow++;
+//            if( NormalizeDouble(iClose(_Symbol, 0, j),4) == NormalizeDouble(currentClose ,4))
+//               countClose++;
+//            if(NormalizeDouble( iOpen(_Symbol, 0, j),4)  == NormalizeDouble(currentOpen,4))
+//               countOpen++;
+//           }
+//        }
+//
+//      if(countHigh >= 10)
+//
+//         leveHigh = currentHigh;
+//
+//      if(countLow >= 10)
+//
+//         leveLow = currentLow;
+//
+//      if(countClose >= 10)
+//
+//         level = currentClose;
+//
+//      if(countOpen >= 10)
+//
+//         level = currentOpen;
+//
+//     }
+//
+//   return level;
+//  }
+//+------------------------------------------------------------------+
+class StockData
+  {
+private:
+   double            levelHigh;
+   double            levelLow;
+   datetime          startTimeH;
+   datetime          startTimeL;
+   datetime          endTimeH;
+   datetime          endTimeL;
+
+public:
+   void              initStockData(int N,int P)
+     {
+      this.findLevel(N,P);
+     }
+
+   void              findLevel(int N, int P)
+     {
+      for(int i = 1; i <= N; i++)
+        {
+         double currentHigh = iHigh(_Symbol, 0, i);
+         double currentLow = iLow(_Symbol, 0, i);
+
+
+         int countHigh = 1;
+         int countLow = 1;
+
+
+         for(int j = 1; j <= N; j++)
+           {
+            if(j != i)
+              {
+               if((NormalizeDouble(iHigh(_Symbol, 0, j), 4) == NormalizeDouble(currentHigh, 4)))
+                 {
+                  if(countHigh ==0)
+                     startTimeH = iTime(_Symbol, PERIOD_CURRENT, j);
+
+                  countHigh++;
+                  endTimeH = iTime(_Symbol, PERIOD_CURRENT, j);
+                 }
+               if((NormalizeDouble(iLow(_Symbol, 0, j), 4) == NormalizeDouble(currentLow, 4)))
+                 {
+                  if(countLow ==0)
+                     startTimeL = iTime(_Symbol, PERIOD_CURRENT, j);
+                  countLow++;
+                  endTimeL = iTime(_Symbol, PERIOD_CURRENT, j);
+                 }
+              }
+
+            if(countHigh >= P)
+               levelHigh = currentHigh;
+            if(countLow >= P)
+               levelLow = currentLow;
+
+           }
+        }
+     }
+
+   double            getLevelHigh()
+     {
+      return levelHigh;
+     }
+
+   double            getLevelLow()
+     {
+      return levelLow;
+     }
+   datetime            getstartTimeH()
+     {
+      return startTimeH;
+     }
+   datetime            getendTimeH()
+     {
+      return endTimeH;
+     }
+   datetime            getstartTimeL()
+     {
+      return startTimeL;
+     }
+   datetime            getendTimeL()
+     {
+      return endTimeL;
+     }
+
+  };
+
+//+------------------------------------------------------------------+
+int Sell_Buy_Risk(double price1,double takeprofit1,double hiHigh1,double loLow1)
+  {
+   int Profit  = (int)NormalizeDouble(MathAbs(price1-takeprofit1)*10000,0);
+   int high = (int)NormalizeDouble((hiHigh1-price1)*10000,0);
+   int low  = (int)NormalizeDouble((price1-loLow1)*10000,0);
+   int sell_risk = 0;
+   int buy_risk  = 0;
+   if(high > 0 && low > 0 && hiHigh1>0 && loLow1>0)
+     {
+      if(high > Profit)
+        {
+         buy_risk = 1;
+         return buy_risk;
+        }
+      if(low > Profit)
+        {
+         sell_risk = 2;
+         return sell_risk;
+        }
+
+
+      //Print(" high:  ",high," low:  ",low," buy_risk:  ",buy_risk," sell_risk:  ",sell_risk);
+     }
+   return 0;
+
+  }
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int RangeDepletion(int Pd,double  hiCLose,double  loCLose)
+  {
+
+   int    flag            = 0;
+   double preVioushiClose = 0;
+   double preViousloClose = 0;
+
+
+
+   for(int i = Pd; i >0; i--)
+     {
+
+      if(
+         (AvgRangeBody(Pd) < (iClose(_Symbol,0,i)- iOpen(_Symbol,0,i))
+
+          && preVioushiClose == hiCLose
+
+          && iOpen(_Symbol,0,i)    == hiCLose
+          && iClose(_Symbol,0,i+1)  == hiCLose
+          && iHigh(_Symbol,0,i)    >  iHigh(_Symbol,0,i+1)
+         )
+      )
+
+         flag  ++;
+
+
+      if(
+
+         (AvgRangeBody(Pd) < (iClose(_Symbol,0,i)- iOpen(_Symbol,0,i))
+          && preViousloClose == loCLose
+
+          && iOpen(_Symbol,0,i)    == loCLose
+          && iClose(_Symbol,0,i+1)  == loCLose
+          && iLow(_Symbol,0,i)     <  iLow(_Symbol,0,i+1)
+         )
+      )
+
+         flag  ++;
+
+
+      if(preVioushiClose != hiCLose || preViousloClose != loCLose)
+        {
+         flag              = 0;
+         preVioushiClose   = hiCLose;
+         preViousloClose   = loCLose;
+        }
+     }
+
+   return flag;
+
+  }
+//+------------------------------------------------------------------+
