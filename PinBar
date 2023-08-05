@@ -1,0 +1,192 @@
+//+------------------------------------------------------------------+
+//|                                                       PinBar.mqh |
+//|                                  Copyright 2023, MetaQuotes Ltd. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property strict
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+double Close1 = iClose(_Symbol, 0, 1);
+double Open1 = iOpen(_Symbol, 0, 1);
+double High1 = iHigh(_Symbol, 0, 1);
+double Low1 = iLow(_Symbol, 0, 1);
+double Close2 = iClose(_Symbol, 0, 2);
+double Open2 = iOpen(_Symbol, 0, 2);
+double High2 = iHigh(_Symbol, 0, 2);
+double Low2 = iLow(_Symbol, 0, 2);
+double Body1 = MathAbs(Close1 - Open1);
+double Body2 = MathAbs(Close2 - Open2);
+double UpperShadow1 = High1 - MathMax(Close1, Open1);
+double LowerShadow1 = MathMin(Close1, Open1) - Low1;
+double UpperShadow2 = High2 - MathMax(Close2, Open2);
+double LowerShadow2 = MathMin(Close2, Open2) - Low2;
+double Range1 = High1 - Low1;
+double Range2 = High2 - Low2;
+
+//+------------------------------------------------------------------+
+//|            Бычья или медвежья свеча                              |
+//+------------------------------------------------------------------+
+int getCandleType(int candleIndex)
+  {
+   double open = iOpen(NULL, 0, candleIndex);
+   double close = iClose(NULL, 0, candleIndex);
+
+   if(open > close)
+     {
+      return 2; // медвежья свеча
+     }
+   else
+      if(open < close)
+        {
+         return 1; // бычья свеча
+        }
+      else
+        {
+         return 0; // свеча неопределенности
+        }
+  }
+
+
+//+------------------------------------------------------------------+
+//|            свеча BarInsight - Медвежий  или Бычий                |
+//+------------------------------------------------------------------+
+int GetBarInsight(int i)
+  {
+
+   if(High[i]  < High[i+1]&& Low[i] > Low[i+1])
+
+      return 1; // Свеча i поглащена предидущей
+
+   return 0; // Инсайт не определен
+  }
+//+------------------------------------------------------------------+
+//|              свеча ПИН    - Медвежий  или Бычий                  |
+//+------------------------------------------------------------------+
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+int  isPinBar(int i)
+  {
+
+   Close1 = iClose(_Symbol, 0, i);
+   Open1 = iOpen(_Symbol, 0, i);
+   High1 = iHigh(_Symbol, 0, i);
+   Low1 = iLow(_Symbol, 0, i);
+   Close2 = iClose(_Symbol, 0, i+1);
+   Open2 = iOpen(_Symbol, 0, i+1);
+   High2 = iHigh(_Symbol, 0, i+1);
+   Low2 = iLow(_Symbol, 0, i+1);
+   Body1 = MathAbs(Close1 - Open1);
+   UpperShadow1 = High1 - MathMax(Close1, Open1);
+   LowerShadow1 = MathMin(Close1, Open1) - Low1;
+   Range1 = High1 - Low1;
+
+
+   if(GetBarInsight(1) ==0 && Open1 != Close1)
+     {
+      if(UpperShadow1 >= Body1 *2  && UpperShadow1 >= 2 * LowerShadow1)
+        {
+         //BearishPinBar
+         //   Comment("Текущая свеча BearishPinBar");
+         return 1;
+        }
+      if(LowerShadow1 >= Body1 *2 && 2 * UpperShadow1  <=  LowerShadow1)
+        {
+         //BullishPinBar
+         // Comment("Текущая свеча BullishPinBar");
+         return 2;
+        }
+
+     }
+// Comment("Текущая свеча не PinBar")  ;
+   return 0;
+  }
+
+//+------------------------------------------------------------------+
+class PinBarDetector
+  {
+public:
+   double            UpperShadow1, LowerShadow1,UpperShadow2, LowerShadow2,Range1,Range2, Body1,Body2;
+private:
+
+   double            Close1, Open1, High1, Low1, Close2, Open2, High2, Low2;
+
+public:
+   int               isPinBar(int i)
+     {
+      Close1 = iClose(_Symbol, 0, i);
+      Open1 = iOpen(_Symbol, 0, i);
+      High1 = iHigh(_Symbol, 0, i);
+      Low1 = iLow(_Symbol, 0, i);
+      Close2 = iClose(_Symbol, 0, i+1);
+      Open2 = iOpen(_Symbol, 0, i+1);
+      High2 = iHigh(_Symbol, 0, i+1);
+      Low2 = iLow(_Symbol, 0, i+1);
+      Body1 = NormalizeDouble(MathAbs(Close1 - Open1),5);
+      Body2 = NormalizeDouble(MathAbs(Close2 - Open2),5);
+      UpperShadow1 = NormalizeDouble(High1 - MathMax(Close1, Open1),5);
+      LowerShadow1 = NormalizeDouble(MathMin(Close1, Open1) - Low1,5);
+      UpperShadow2 = NormalizeDouble(High2 - MathMax(Close2, Open2),5);
+      LowerShadow2 = NormalizeDouble(MathMin(Close2, Open2) - Low2,5);
+      Range1 = High1 - Low1;
+      Range2 = High2 - Low2;
+
+      //Print ("UpperShadow1 = ",UpperShadow1,"LowerShadow1 = ",LowerShadow1,"Body1 = ",Body1);
+      //if(GetBarInsight() == 0)
+      //  {
+      if(UpperShadow1 >= Body1 *2 && UpperShadow1 >= 2* LowerShadow1)
+        {
+         // BearishPinBar
+         return 1;
+        }
+      if(LowerShadow1 >= Body1 *2 && UpperShadow1*2 <= LowerShadow1)
+        {
+         // BullishPinBar
+         return 2;
+        }
+
+      // Comment("Текущая свеча не PinBar")  ;
+      return 0;
+     }
+
+
+  };
+//+------------------------------------------------------------------+
+bool UncertaintyCandle(int i)
+  {
+   Close1 = iClose(_Symbol, 0, i);
+   Open1 = iOpen(_Symbol, 0, i);
+   High1 = iHigh(_Symbol, 0, i);
+   Low1 = iLow(_Symbol, 0, i);
+ 
+   Body1 = NormalizeDouble(MathAbs(Close1 - Open1),5);
+   UpperShadow1 = NormalizeDouble(High1 - MathMax(Close1, Open1),5);
+   LowerShadow1 = NormalizeDouble(MathMin(Close1, Open1) - Low1,5);
+   Range1 = NormalizeDouble((High1 - Low1),5);
+
+
+   if(((NormalizeDouble(LowerShadow1,4)   <   NormalizeDouble(UpperShadow1 *1.30,4)  &&   NormalizeDouble(LowerShadow1,4) >= NormalizeDouble(UpperShadow1,4))   ||
+       (NormalizeDouble(UpperShadow1,4)   <   NormalizeDouble(LowerShadow1 *1.30,4)  &&  NormalizeDouble(UpperShadow1,4) >=  NormalizeDouble(LowerShadow1,4)))  &&
+        NormalizeDouble(Body1,4)         <=   NormalizeDouble(Range1 * 0.09,4))
+
+      return true;
+   else
+     {
+
+      if (!(NormalizeDouble(LowerShadow1,4)   <   NormalizeDouble(UpperShadow1 *1.30,4)  &&   NormalizeDouble(LowerShadow1,4) >= NormalizeDouble(UpperShadow1,4)))
+         Print("Нижняя тень ",NormalizeDouble(LowerShadow1,4)," не в диапазоне 30% верхней! от ",NormalizeDouble(UpperShadow1 *1.20,4)," до ", NormalizeDouble(UpperShadow1,4));
+      if(!(NormalizeDouble(UpperShadow1,4)   <   NormalizeDouble(LowerShadow1 *1.30,4)  &&  NormalizeDouble(UpperShadow1,4) >=  NormalizeDouble(LowerShadow1,4)))
+         Print("Верхняя тень ",NormalizeDouble(UpperShadow1,4)," не в диапазоне 30% нижней! от ",NormalizeDouble(LowerShadow1 *1.20,4)," до ", NormalizeDouble(LowerShadow1,4));
+      if(Body1 > Range1 * 0.09)
+         Print("Тело свечи ",NormalizeDouble(Body1,5)," больше чем Range1 * 0.06! ",NormalizeDouble(Range1,5));
+      return false;
+     }
+
+  }
+//+------------------------------------------------------------------+
