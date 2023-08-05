@@ -1,0 +1,550 @@
+//+------------------------------------------------------------------+
+//|                                                         Test.mq4 |
+//|                                  Copyright 2023, MetaQuotes Ltd. |
+//|                                             https://www.mql5.com |
+//+------------------------------------------------------------------+
+#property copyright "Copyright 2023, MetaQuotes Ltd."
+#property link      "https://www.mql5.com"
+#property version   "1.00"
+#property strict
+#include <Paterns.mqh>
+#include <PinBar.mqh>
+input int          pd;
+input int          ExpDate;
+input int          count;
+input int          MAvalue;
+input int          vol;
+input double       TrailingStop;
+input double       profit;
+input double       Risk;
+
+
+
+int             ticket;
+int             tough;
+double          Lt;
+int             Magic_num          = 007;
+double          price              = 0;
+double          takeprofit         = 0;
+double          stoploss           = 0;
+double          initial_Balance;
+int             cnt;
+double          maValue6;
+double          rsiValue;
+double         cci_value;
+PinBarDetector pbd;
+ClosingLevels cl(pd, PERIOD_CURRENT);
+double          hiClose            = cl.GetHighestClose();
+double          loClose            = cl.GetLowestClose();
+double          hiHigh             = cl.GetHighestHigh();
+double          loLow              = cl.GetLowestLow();
+
+//double          smoleMA;
+//double          maValueFast;
+//double          maValueSlow;
+//double          grateMA;
+//input int        MAfast;
+//input int        MAslow;
+//input int        Life_time;
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+  {
+   if(Digits == 3 || Digits == 5)
+      stoploss *=10;
+// Установка времени последнего тика
+   lastTickTime = iTime(_Symbol, timeframe, 0);
+   
+   initial_Balance = AccountInfoDouble(ACCOUNT_BALANCE);
+// Определяем продолжительность восемь часов
+//   ExpDate = TimeCurrent() + (pd * 60 * 60);
+
+
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+   Comment(" pd (количкство чсечей для уровней)           -   " + DoubleToString(pd,0) + "\n"+
+           " Lt (обьем лота)                              -   " + DoubleToString(Lt,0)+ "\n"+
+           " count(количество свечей для периода ATR )    -   " + DoubleToString(count,0) + "\n"+
+           " profit(моржа к стопу)                        -   " + DoubleToString(profit,0) + "\n"+
+           " MAperiod()                                   -   " + DoubleToString(MAvalue,0) + "\n"+
+           " TrailingStop                                 -   " + DoubleToString(TrailingStop,0));
+//---
+   return(INIT_SUCCEEDED);
+  }
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+  {
+//---
+
+  }
+
+
+//+------------------------------------------------------------------+
+//|                      ==Signal==   Buy                            |
+//+------------------------------------------------------------------+
+//-----------
+int Buy_structure(string symbol)
+  {
+//бычий PPR
+   if(
+      close1 > high2 +spread      &&
+      open2  > close2             &&
+      close1 > open1 )
+
+      //GetBarInsight(2) != 1 && GetBarInsight(1) != 1 && GetBarInsight(3) != 1
+      //&& AvgRangeBody(count) > pbd.Body1
+      //&& pbd.Body1          <= pbd.Body2*2)
+
+      return 1;
+
+// BullishPinBar
+   if(pbd.isPinBar(1)== 2 && GetBarInsight(2) != 1 && GetBarInsight(1) != 1 && GetBarInsight(3) != 1 && pbd.Body2 < AvgRangeBody(count))
+
+      return 2;
+
+// бычье поглащение Buy
+   if((Signal_Buy_structure()&& isPinBar(2)== 0)
+      && AvgRangeBody(count) >= pbd.Body1
+      && pbd.Body1           <= pbd.Body2*2)
+      return 3;
+//Две вороны взлетают
+   if(getCandleType(2)== 1 && getCandleType(1)== 1 && close1 > close2)
+
+      return 14;
+
+
+   return 0;
+  }
+//+------------------------------------------------------------------+
+//|                    ==Signal==   Sell                             |
+//+------------------------------------------------------------------+
+int Sell_structure(string symbol)
+  {
+   if(
+//медвежий PPR
+
+      close1 <  low2 - spread       &&
+      close2 >  open2               &&
+      open1  >  close1)
+
+      //GetBarInsight(2) != 1 && GetBarInsight(1) != 1 && GetBarInsight(3) != 1
+      //&& AvgRangeBody(count) > pbd.Body1
+      //&& pbd.Body1           <= pbd.Body2*2)
+
+      //&& AvgRangeBody(count) >= pbd.Range1
+
+      // && pbd.Range1 < pbd.Range2*2) //   && AvgRangeBody(count)>= pbd.Range1&& pbd.Range1 <= pbd.Range2*0.5)//&& isPinBar(2)== 0  предидущая свеча может быть ПИН баром
+      return 1;
+
+// BearishPinBar
+   if(pbd.isPinBar(1) == 1 && GetBarInsight(2) != 1 && GetBarInsight(1) != 1 && GetBarInsight(3) != 1 && pbd.Body2 < AvgRangeBody(count))
+
+      return 2;
+
+// медвежье поглащение Sell
+
+   if((Signal_Sell_structure()&& isPinBar(2)== 0)
+      && AvgRangeBody(count) >= pbd.Body1
+      && pbd.Body1           <= pbd.Body2*2)
+      return 3;
+
+//Две вороны садятся
+   if(getCandleType(2)== 2 && getCandleType(1)== 2 && close1 < close2)
+
+      return 14;
+
+   return 0;
+
+  }
+
+//+------------------------------------------------------------------+
+//| Check for open order conditions                                  |
+//+------------------------------------------------------------------+
+void CheckForOpen()
+  {
+
+//--- buy conditions PPR
+   if(Buy_structure(_Symbol) == 1 &&  close1 > maValue6)
+      // ||(Buy_structure(_Symbol) == 1 && (loLow != low2 || loClose >= low1)))
+     {
+      Print("Логика PPR на покупку есть!");
+
+
+      if(low1<low2)
+
+         stoploss = low1 - spread *vol ;
+
+      else
+
+         stoploss = low2 - spread *vol;
+
+      price = high2 ;
+      takeprofit = price + (price - stoploss)*profit;
+      Lt = LotsByRisk(OP_BUYLIMIT,price,stoploss,Risk,initial_Balance);
+
+      if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1 && low1>=low2)
+         ticket = OrderSend(_Symbol,OP_BUYLIMIT,Lt, price, 3,stoploss,  takeprofit, "My Buy Order", Magic_num,ExpDate, Green);
+      else
+         if((Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1 && low1 < low2) ||
+            (Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1 && pbd.isPinBar(2)== 2))
+           {
+            price = Ask ;
+            ticket = OrderSend(_Symbol,OP_BUY,Lt, price, 3,stoploss,  takeprofit, "My Buy Order", Magic_num,ExpDate, Green);
+           }
+      if(ticket > 0)
+        {
+         Print("отложенный PPR ордер на покупку установлен на цене  ", price,"стоп лосс  ",
+               stoploss,"тейк-рофит ",takeprofit,"спред  ", spread);
+        }
+      else
+        {
+         Print("Ошибка при создании отложенного PPR ордера на покупку по  цене  ", price," currenttBid:  ", currenttBid," стоп лосс:  ",
+               stoploss,"тейк-рофит:  ",takeprofit,"спред:  ", DoubleToStr(NormalizeDouble(spread,5)), GetLastError());
+        }
+
+      return;
+     }
+//--- buy conditions PinBar
+
+   if(Buy_structure(_Symbol) == 2   && (open1 - spread > maValue6 || close1 -  spread > maValue6)&& getCandleType(1)==1 && GetBarInsight(2)==0
+      && GetBarInsight(1)==0 && GetBarInsight(3)==0)
+
+     {
+
+      price = currenttAsk;
+      stoploss = low1 - spread *vol;
+      takeprofit = price + (price -stoploss)*profit ;
+      Lt = LotsByRisk(OP_BUY,price,stoploss,Risk,initial_Balance);
+
+      if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1)
+
+         ticket=OrderSend(_Symbol,OP_BUY,Lt, price,2,stoploss,  takeprofit, "My Buy Order", Magic_num,ExpDate, Green);
+
+      if(ticket > 0)
+        {
+         Print("ордер на покупку PinBar установлен на цене  ", price,"стоп лосс  ",
+               stoploss,"тейк-рофит ",takeprofit,"currenttAsk  ", NormalizeDouble(currenttAsk,5));
+        }
+      else
+        {
+         Print("Ошибка при создании PinBar ордера на покупку :по  цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит  ",NormalizeDouble(takeprofit, 5),"currenttAsk  ",NormalizeDouble(currenttAsk,5),GetLastError());
+        }
+
+      return;
+     }
+//--- buy conditions поглащение или Две вороны взлетают
+
+   if((Buy_structure(_Symbol) == 3  || Buy_structure(_Symbol)== 1) && close1 > maValue6)        // && maValueSlow < maValueFast)
+     {
+      Print("Логика на покупку поглащение есть!");
+      price = Ask ;
+      stoploss = low1 - spread *vol;//
+      takeprofit =  price + (price - stoploss) *profit;
+      Lt = LotsByRisk(OP_BUY,price,stoploss,Risk,initial_Balance);
+
+      if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1)
+         ticket=OrderSend(_Symbol,OP_BUY,Lt, price, 3,stoploss,  takeprofit, "My Buy Order", Magic_num,ExpDate, Green);
+      if(ticket > 0)
+        {
+         Print("ордер на покупку поглащение установлен на цене  ", price,"стоп лосс  ",
+               stoploss,"тейк-рофит ",takeprofit,"спред  ", spread);
+        }
+      else
+        {
+         Print("Ошибка при создании поглащение ордера на покупку :по  цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит  ",NormalizeDouble(takeprofit, 5),"спред  ", spread, GetLastError());
+        }
+
+      return;
+     }
+
+   else
+
+      //--- sell conditions PPR
+
+      if(Sell_structure(_Symbol) == 1  && (open1 - spread > maValue6 || close1 -  spread > maValue6))
+         // ||(Sell_structure(_Symbol) == 1  &&  hiHigh != high1   && hiClose < high1))
+        {
+         Print("Логика PPR на продажу есть");
+
+
+         if(high1<high2)
+
+            stoploss = high2+spread *vol ;
+
+         else
+
+            stoploss = high1+spread *vol ;
+
+         price = low2 ;
+         takeprofit = price -(stoploss - price)*profit ;
+         Lt = LotsByRisk(OP_SELLLIMIT,price,stoploss,Risk,initial_Balance);
+
+         if((Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 2 && high1<=high2)||
+            (Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 2 && pbd.isPinBar(2)== 1))
+            ticket=OrderSend(_Symbol,OP_SELLLIMIT,Lt, price, 3, stoploss, takeprofit, "My Sell Order", Magic_num,ExpDate, Red);
+         else
+            if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 1 && high1>high2)
+              {
+               price = Bid ;
+               ticket = OrderSend(_Symbol,OP_BUY,Lt, price, 3,stoploss,  takeprofit, "My Buy Order", Magic_num,ExpDate, Green);
+              }
+         if(ticket > 0)
+           {
+            Print("отложенный ордер на PPR продажу установлен на цене  ", price,"стоп лосс  ",
+                  NormalizeDouble(stoploss, 5),"тейк-рофит",NormalizeDouble(takeprofit, 5),"спред", spread);
+           }
+         else
+           {
+            Print("ОШИБКА при создании отложенного PPR ордера на продажу по  цене:  ", price," currenttAsk:  ", currenttAsk," стоп лосс:  ",
+                  stoploss,"тейк-рофит:  ",takeprofit,"спред:  ", DoubleToStr(NormalizeDouble(spread,5)), GetLastError());
+           }
+         return;
+        }
+
+
+//--- sell conditions PinBar
+
+   if(Sell_structure(_Symbol) == 2 && (open1 - spread > maValue6 || close1 -  spread > maValue6)&& getCandleType(1)==2 && GetBarInsight(2)==0
+      && GetBarInsight(1)==0 && GetBarInsight(3)==0)
+     {
+      Print("Логика PinBar на продажу есть!!");
+
+      price = Bid;
+      stoploss = high1+spread *vol ;
+      takeprofit = price -(stoploss- price)*profit;
+      Lt = LotsByRisk(OP_SELL,price,stoploss,Risk,initial_Balance);
+
+      if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 2)
+         ticket=OrderSend(_Symbol,OP_SELL,Lt, price,2, stoploss, takeprofit, "My Sell Order", Magic_num,ExpDate, Red);
+      if(ticket > 0)
+        {
+         Print("ордер на продажу PinBar установлен на цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит",NormalizeDouble(takeprofit, 5),"currenttBid  ", NormalizeDouble(currenttBid,5));
+        }
+      else
+        {
+         Print("Ошибка при создании PinBar ордера на продажу: по  цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит  ",NormalizeDouble(takeprofit, 5),"currenttBid  ",NormalizeDouble(currenttBid,5), GetLastError());
+        }
+      return;
+     }
+
+
+
+//--- sell conditions поглащение или Две вороны садятся
+
+   if((Sell_structure(_Symbol) == 3 || Sell_structure(_Symbol) == 1) && close1 < maValue6)
+
+     {
+      Print("Логика на продажу есть поглащение");
+      price = Bid ;
+      stoploss = high1 +spread *vol ; //hiHigh + pbd.Range1;
+      takeprofit = price - (stoploss - price) * profit;//loClose;
+      Lt = LotsByRisk(OP_SELL,price,stoploss,Risk,initial_Balance);
+
+      if(Sell_Buy_Risk(price,takeprofit,hiHigh,loLow) == 2)
+         ticket=OrderSend(_Symbol,OP_SELL,Lt, price, 3, stoploss, takeprofit, "My Sell Order", Magic_num,ExpDate, Red);
+      if(ticket > 0)
+        {
+         Print("ордер на продажу поглащение установлен на цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит",NormalizeDouble(takeprofit, 5),"спред", spread);
+        }
+      else
+        {
+         Print("Ошибка при создании поглащение ордера на продажу: по  цене  ", price,"стоп лосс  ",
+               NormalizeDouble(stoploss, 5),"тейк-рофит  ",NormalizeDouble(takeprofit, 5),"спред  ", spread, GetLastError());
+        }
+      return;
+     }
+
+
+
+
+
+////--- sell conditions from LEVEL
+//
+//   if(open1 == close1 && (hiHigh == high1  || hiClose < high1)&& sell_risk ==2)// ||(Signal_Sell_structure(_Symbol) && hiHigh == high1  && close1 > maValue6 && sell_risk ==2))    //&& currenttBid +spread < maValue6)       // && maValueSlow > maValueFast)
+//     {
+//      // Print("Логика на продажу есть!!"," high:  ",high," low:  ",low," sell_risk:  ",sell_risk);
+//
+//      price = Bid ;
+//      stoploss = high1 ;
+//      takeprofit = loClose;//price -(stoploss- price)*profit;
+//      Lt = LotsByRisk(OP_SELL,price,stoploss,Risk);
+//      Print("Lt - ",Lt);
+//      if(sell_risk == 2)
+//         ticket=OrderSend(_Symbol,OP_SELL,Lt, price,2, stoploss, takeprofit, "My Sell Order", Magic_num,ExpDate, Red);
+//      if(ticket > 0)
+//        {
+//         Print("ордер на продажу установлен на цене  ", price,"стоп лосс  ",
+//               NormalizeDouble(stoploss, 5),"тейк-рофит",NormalizeDouble(takeprofit, 5),"currenttBid  ", NormalizeDouble(currenttBid,5));
+//        }
+//      else
+//        {
+//         Print("Ошибка при создании  ордера на продажу: по  цене  ", price,"стоп лосс  ",
+//               NormalizeDouble(stoploss, 5),"тейк-рофит  ",NormalizeDouble(takeprofit, 5),"currenttBid  ",NormalizeDouble(currenttBid,5), GetLastError());
+//        }
+//      return;
+//     }
+  }
+//+------------------------------------------------------------------+
+//| Check for close order conditions                                 |
+//+------------------------------------------------------------------+
+void CheckForClose()
+  {
+   datetime time;
+   double   takeProfit;
+   bool     orderSelected;
+   double   limitOrderPrice ;
+   int      total_orders = OrdersTotal();
+
+   for(int i = total_orders - 1; i >= 0; i--)
+     {
+      if(OrderSelect(i, SELECT_BY_POS, MODE_TRADES))
+        {
+         if(OrderType() == OP_BUYLIMIT || OrderType() == OP_SELLLIMIT)
+           {
+
+            // Выберите отложенный лимитный ордер по его номеру
+            orderSelected = OrderSelect(OrderTicket(), SELECT_BY_TICKET);
+
+            // Проверьте, был ли ордер выбран успешно
+            if(orderSelected > 0)
+              {
+               // Получите актуальное значение цены отложенного лимитного ордера
+               time = OrderOpenTime();
+               limitOrderPrice = OrderOpenPrice();
+               takeProfit = OrderTakeProfit();
+               Print("Есть незакрытый ордер! Его цена limitOrderPrice  ",limitOrderPrice);
+               Print("close1           ",high1);
+               Print("Время установки  ",time);
+               Print("Время истечения  ",time + (pd/2 * 3600));
+               Print("Текущее время  ",TimeCurrent());
+               Print("takeProfit       ",takeProfit);
+              }
+            else
+              {
+               Print("Ордеров нет");
+              }
+
+
+            // проверяем, если цена ушла в неактивированном направлении
+            if((OrderType() == OP_BUYLIMIT  && TimeCurrent() > time + (pd/2 * 3600)) ||
+               (OrderType() == OP_SELLLIMIT && TimeCurrent() > time + (pd/2 * 3600)))
+              {
+
+               // отменяем ордер
+               if(!OrderDelete(OrderTicket()))
+
+                  Print("Ошибка отмены ордера", OrderTicket(), ". Код ошибки:", GetLastError());
+
+              }
+           }
+        }
+     }
+   for(cnt=0; cnt<OrdersTotal(); cnt++)
+     {
+      if(!OrderSelect(cnt,SELECT_BY_POS,MODE_TRADES))
+         continue;
+      if(OrderType()<=OP_SELL &&   // check for opened position
+         OrderSymbol()==Symbol())  // check for symbol
+        {
+         //--- long position is opened
+         if(OrderType()==OP_BUY)
+           {
+            //--- should it be closed?
+            if(currenttBid == stoploss ||currenttAsk == takeprofit)
+              {
+               //--- close order and exit
+               if(!OrderClose(OrderTicket(),OrderLots(),Bid,3,Violet))
+                  Print("OrderClose error ",GetLastError());
+               return;
+              }
+            //--- check for trailing stop
+            if(TrailingStop>0)
+              {
+               if(Bid-OrderOpenPrice()>Point*TrailingStop)
+                 {
+                  if(OrderStopLoss()<Bid-Point*TrailingStop)
+                    {
+                     //--- modify order and exit
+                     if(!OrderModify(OrderTicket(),OrderOpenPrice(),Bid-Point*TrailingStop,OrderTakeProfit(),0,Green))
+                        Print("OrderModify error ",GetLastError());
+                     return;
+                    }
+                 }
+              }
+           }
+         else // go to short position
+           {
+            //--- should it be closed?
+            if(currenttBid == stoploss ||currenttAsk == takeprofit)
+              {
+               //--- close order and exit
+               if(!OrderClose(OrderTicket(),OrderLots(),Ask,3,Violet))
+                  Print("OrderClose error ",GetLastError());
+               return;
+              }
+            //--- check for trailing stop
+            if(TrailingStop>0)
+              {
+               if((OrderOpenPrice()-Ask)>(Point*TrailingStop))
+                 {
+                  if((OrderStopLoss()>(Ask+Point*TrailingStop)) || (OrderStopLoss()==0))
+                    {
+                     //--- modify order and exit
+                     if(!OrderModify(OrderTicket(),OrderOpenPrice(),Ask+Point*TrailingStop,OrderTakeProfit(),0,Red))
+                        Print("OrderModify error ",GetLastError());
+                     return;
+                    }
+                 }
+              }
+           }
+        }
+     }
+  }
+//+------------------------------------------------------------------+
+//|                                                                  |
+//+------------------------------------------------------------------+
+
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+
+  {
+   if(isNewCandle())
+     {
+      Print(TimeCurrent());
+      find_candles();
+      RefreshBidAsk();
+      spread        = MarketInfo(_Symbol, MODE_SPREAD) * Point;
+      maValue6 = iMA(_Symbol, PERIOD_CURRENT, MAvalue, 0, MODE_SMA, PRICE_CLOSE, 0);
+      isPinBar(1);
+      isPinBar(2);
+      pbd.isPinBar(2);
+      GetBarInsight(1);
+      GetBarInsight(2);
+      AvgRangeBody(count);
+      hiClose = cl.GetHighestClose();
+      loClose = cl.GetLowestClose();
+      hiHigh = cl.GetHighestHigh();
+      loLow = cl.GetLowestLow();
+
+      cci_value = iCCI(Symbol(), PERIOD_CURRENT, 14, PRICE_TYPICAL, 1); // Значение CCI для свечи с индексом 1
+      rsiValue = iRSI(NULL, 0, 14, PRICE_CLOSE, 1);
+
+
+      Draw_level(hiClose,loClose,hiHigh,loLow);
+      CheckForOpen();
+      CheckForClose();
+     }
+  }
+
+//+------------------------------------------------------------------+
